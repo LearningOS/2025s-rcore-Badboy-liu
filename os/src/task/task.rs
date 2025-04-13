@@ -1,6 +1,5 @@
 //! Types related to task management
 
-use alloc::boxed::ThinBox;
 use crate::syscall::SYSTEM_CALL_MAX_NUM;
 use super::TaskContext;
 
