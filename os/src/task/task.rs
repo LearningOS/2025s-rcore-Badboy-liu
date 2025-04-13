@@ -1,9 +1,11 @@
 //! Types related to task management
+
 use super::TaskContext;
 use crate::config::TRAP_CONTEXT_BASE;
 use crate::mm::{
     kernel_stack_position, MapPermission, MemorySet, PhysPageNum, VirtAddr, KERNEL_SPACE,
 };
+use crate::syscall::SYSTEM_CALL_NUM_MAX;
 use crate::trap::{trap_handler, TrapContext};
 
 /// The task control block (TCB) of a task.
@@ -28,9 +30,37 @@ pub struct TaskControlBlock {
 
     /// Program break
     pub program_brk: usize,
+    /// task info
+    pub info:TaskInfo,
 }
 
+pub struct TaskInfo{
+    pub call_num:[isize;SYSTEM_CALL_NUM_MAX]
+}
+impl TaskInfo{
+    fn incr_call_num(&mut self,system_id:usize){
+        self.call_num[system_id] = self.call_num[system_id] + 1;
+    }
+    pub fn get_call_num(&self,system_id:usize)->isize{
+        self.call_num[system_id]
+    }
+}
 impl TaskControlBlock {
+
+
+    ///get info
+    pub fn get_call_num(&self,system_id:usize)->isize{
+        self.info.get_call_num(system_id)
+    }
+    ///get info
+    pub fn get_info(&self)->&TaskInfo{
+        &self.info
+    }
+
+    /// incr_call_num
+    pub fn incr_call_num(&mut self,system_id:usize){
+        self.info.incr_call_num(system_id)
+    }
     /// get the trap context
     pub fn get_trap_cx(&self) -> &'static mut TrapContext {
         self.trap_cx_ppn.get_mut()
@@ -63,6 +93,9 @@ impl TaskControlBlock {
             base_size: user_sp,
             heap_bottom: user_sp,
             program_brk: user_sp,
+            info:TaskInfo{
+                call_num:[0;SYSTEM_CALL_NUM_MAX]
+            }
         };
         // prepare TrapContext in user space
         let trap_cx = task_control_block.get_trap_cx();

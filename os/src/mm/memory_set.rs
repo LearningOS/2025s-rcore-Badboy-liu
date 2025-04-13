@@ -40,6 +40,38 @@ pub struct MemorySet {
 }
 
 impl MemorySet {
+
+    ///check range
+    pub fn check_range(&self, start_vpn: VirtPageNum, end_vpn: VirtPageNum) -> bool {
+        for area in &self.areas {
+            if area.vpn_range.get_end()>start_vpn && area.vpn_range.get_start()<end_vpn {
+                return false;
+            }
+        }
+
+        true
+    }
+
+    ///check range
+    pub fn check_area(&self, start_vpn: VirtPageNum, end_vpn: VirtPageNum) -> bool {
+        for area in &self.areas {
+            if area.vpn_range.get_start()==start_vpn && area.vpn_range.get_end()==end_vpn {
+                return true;
+            }
+        }
+
+        false
+    }
+    /// unmap_area
+    pub fn unmap_area(&mut self,start:VirtPageNum){
+        if let Some(index) = self.areas.iter().position( |area| area.vpn_range.get_start()==start) {
+            let area = &mut self.areas[index];
+            area.unmap(&mut self.page_table);
+            self.areas.remove(index);
+        }else {
+            panic!("no area to unmap!{:?}",start);
+        }
+    }
     /// Create a new empty `MemorySet`.
     pub fn new_bare() -> Self {
         Self {

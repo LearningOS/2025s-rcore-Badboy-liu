@@ -23,6 +23,7 @@ use switch::__switch;
 pub use task::{TaskControlBlock, TaskStatus};
 
 pub use context::TaskContext;
+use crate::mm::{MapPermission, VirtAddr, VirtPageNum};
 
 /// The task manager, where all the tasks are managed.
 ///
@@ -71,6 +72,51 @@ lazy_static! {
 }
 
 impl TaskManager {
+
+    /// 获得当前任务
+    pub fn get_call_num(&self,system_id:usize)->isize{
+        let  inner = self.inner.exclusive_access();
+        let task = inner.current_task;
+        inner.tasks[task].get_call_num(system_id)
+    }
+    /// 递增当前任务调用数量
+    pub(crate) fn incr_call_num(&self, system_id:usize){
+        let mut inner = self.inner.exclusive_access();
+        let task = inner.current_task;
+        inner.tasks[task].incr_call_num(system_id);
+
+    }
+
+    /// push map_area
+    pub fn push_map_area(&self,start: usize,end: usize,port:usize)->bool{
+        let mut inner = self.inner.exclusive_access();
+        let start_vpn = VirtPageNum::from(VirtAddr::from(start));
+        let end_vpn = VirtPageNum::from(VirtAddr::from(end));
+        let task = inner.current_task;
+        let  ms = &mut inner.tasks[task].memory_set;
+        if !ms.check_range(start_vpn, end_vpn) {
+            return false;
+        }
+        ms.insert_framed_area(start_vpn.into(),end_vpn.into(),MapPermission::U|MapPermission::from_bits_truncate(port as u8));
+        true
+
+    }
+
+    /// 解除映射
+    pub fn unmap_area(&self,start: usize,end: usize)->bool{
+        let mut inner = self.inner.exclusive_access();
+        let task = inner.current_task;
+        let  ms = &mut inner.tasks[task].memory_set;
+        let start_vpn = VirtAddr::from(start);
+        let start_page = VirtPageNum::from(start_vpn);
+        if !ms.check_area(start_page,VirtPageNum::from(VirtAddr::from(end))){
+            println!("!ms.check_area");
+            return false;
+        }
+        ms.unmap_area(start_page);
+        true
+    }
+
     /// Run the first task in task list.
     ///
     /// Generally, the first task in task list is an idle task (we call it zero process later).
@@ -176,6 +222,14 @@ fn mark_current_exited() {
     TASK_MANAGER.mark_current_exited();
 }
 
+/// umap_area
+pub fn unmap_area(start:usize,end:usize)->bool{
+    TASK_MANAGER.unmap_area(start,end)
+}
+/// unmap_area
+pub fn push_map_area(start: usize,end: usize,port:usize)->bool{
+    TASK_MANAGER.push_map_area(start,end,port)
+}
 /// Suspend the current 'Running' task and run the next task in task list.
 pub fn suspend_current_and_run_next() {
     mark_current_suspended();
