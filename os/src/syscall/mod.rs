@@ -21,20 +21,39 @@ const SYSCALL_GET_TIME: usize = 169;
 /// trace syscall
 const SYSCALL_TRACE: usize = 410;
 
+pub(crate) const SYSTEM_CALL_MAX_NUM:usize = 500;
 mod fs;
 mod process;
 
 use fs::*;
 use process::*;
+use crate::task::TASK_MANAGER;
 
 /// handle syscall exception with `syscall_id` and other arguments
 pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
-    match syscall_id {
+    TASK_MANAGER.system_call_num_inc(syscall_id);
+    let ret = match syscall_id {
         SYSCALL_WRITE => sys_write(args[0], args[1] as *const u8, args[2]),
         SYSCALL_EXIT => sys_exit(args[0] as i32),
         SYSCALL_YIELD => sys_yield(),
         SYSCALL_GET_TIME => sys_get_time(args[0] as *mut TimeVal, args[1]),
         SYSCALL_TRACE => sys_trace(args[0], args[1], args[2]),
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
-    }
+    };
+    ret
 }
+
+// pub(crate) fn get_index(system_id:usize)->usize{
+//     let mut i = 0 ;
+//     match system_id {
+//         64=>i=0,
+//         93=>i=1,
+//         124=>i=2,
+//         169=>i=3,
+//         410=>i=4,
+//         _ => {
+//             println!("--!!!!!!!");
+//         }
+//     }
+//     i
+// }
