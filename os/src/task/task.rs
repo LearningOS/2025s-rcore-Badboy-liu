@@ -31,7 +31,6 @@ pub struct TaskInfo{
 
 impl TaskInfo {
     pub fn new()-> Self {
-        let five = ThinBox::new([0;500]);
         TaskInfo{system_call_nums:[0;SYSTEM_CALL_MAX_NUM]}
     }
     pub fn system_call_num_inc(&mut self, system_id:usize){
